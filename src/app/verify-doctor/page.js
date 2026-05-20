@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { ShieldCheck, ArrowRight, UserCheck, AlertCircle, HelpCircle } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
-export default function VerifyDoctorPage() {
+function VerifyDoctorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -80,7 +80,7 @@ export default function VerifyDoctorPage() {
           {/* Security Indicator */}
           <div className="flex items-center gap-2 bg-govBlue-50 dark:bg-govBlue-950/60 p-3 rounded-2xl border border-govBlue-100 dark:border-govBlue-800 text-xs text-govBlue-600 dark:text-govBlue-300 font-medium mb-6">
             <UserCheck className="w-5 h-5 text-govGold-500 flex-shrink-0" />
-            <span>Profile lookup requires active OTP validation sent directly to the practitioner\'s registered email.</span>
+            <span>Profile lookup requires active OTP validation sent directly to the practitioner's registered email.</span>
           </div>
 
           {/* Middleware redirect error alert */}
@@ -131,3 +131,16 @@ export default function VerifyDoctorPage() {
     </div>
   );
 }
+
+export default function VerifyDoctorPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full bg-govBlue-50/10 py-16 px-4 flex flex-col items-center justify-center flex-grow text-center text-xs text-govBlue-600">
+        Loading verification hub...
+      </div>
+    }>
+      <VerifyDoctorContent />
+    </Suspense>
+  );
+}
+

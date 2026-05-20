@@ -11,9 +11,14 @@ export const metadata = {
   description: 'Official Doctor Registration and Secure Verification Platform of the Maharashtra Medical Council, Mumbai. Verify Registered Medical Practitioners (RMPs) instantly with secure OTP validation.',
   keywords: 'Maharashtra Medical Council, MMC Mumbai, Doctor Verification, RMP Register, Medical Practitioner Validation, FMG Internship, CPD Points',
   authors: [{ name: 'Maharashtra Medical Council' }],
-  viewport: 'width=device-width, initial-scale=1.0',
   robots: 'index, follow',
 };
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 
 export default function RootLayout({ children }) {
   return (
