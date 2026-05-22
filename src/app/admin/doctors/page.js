@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { 
@@ -12,43 +12,62 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
   Award
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { useGraphQL } from '@/hooks/useGraphQL';
 import Link from 'next/link';
+
+const DOCTORS_QUERY = `#graphql
+  query GetDoctors($search: String, $page: Int, $limit: Int) {
+    doctors(search: $search, page: $page, limit: $limit) {
+      doctors {
+        id
+        register_no
+        sr_no
+        doctor_name
+        father_name
+        dob
+        qualification
+        address
+        email
+        date_of_issue
+        valid_upto
+        doctor_image
+        created_at
+      }
+      pagination {
+        page
+        limit
+        total
+        totalPages
+      }
+    }
+  }
+`;
 
 export default function AdminDoctorsPage() {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const [doctors, setDoctors] = useState([]);
+  const { data, loading, executeQuery } = useGraphQL();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
 
-  async function loadDoctors() {
-    setLoading(true);
-    try {
-      const response = await axios.get(`/api/doctors?page=${page}&limit=10&search=${encodeURIComponent(search)}`);
-      if (response.data?.success) {
-        setDoctors(response.data.doctors);
-        setTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error('Error fetching doctors:', error);
-      showToast('Failed to load doctor directory.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Memoize data fetching handler to prevent re-fetch loop on rendering cycles
+  const loadDoctors = useCallback(() => {
+    executeQuery(DOCTORS_QUERY, { search, page, limit: 10 }).catch((err) => {
+      console.error('Error fetching doctors via GraphQL:', err);
+      showToast('Failed to load doctor directory via GraphQL.', 'error');
+    });
+  }, [search, page, executeQuery, showToast]);
 
   useEffect(() => {
     loadDoctors();
-  }, [page, search]);
+  }, [loadDoctors]);
 
-  const handleDelete = async (id, name) => {
+  // Memoize delete operation
+  const handleDelete = useCallback(async (id, name) => {
     if (!window.confirm(`Are you sure you want to permanently delete the registration credentials file for ${name}? This action is destructive and irreversible.`)) {
       return;
     }
@@ -63,7 +82,11 @@ export default function AdminDoctorsPage() {
       console.error('Error deleting doctor:', error);
       showToast('Deletion failed. Authorized admins only.', 'error');
     }
-  };
+  }, [loadDoctors, showToast]);
+
+  // Memoize lists and pagination counts to bypass complex object comparisons in React tree
+  const doctors = useMemo(() => data?.doctors?.doctors || [], [data]);
+  const totalPages = useMemo(() => data?.doctors?.pagination?.totalPages || 1, [data]);
 
   return (
     <div className="w-full bg-govBlue-950 min-h-screen text-white flex flex-col">

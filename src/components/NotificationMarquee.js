@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import axios from 'axios';
 import { BellRing, ShieldCheck } from 'lucide-react';
+import { useGraphQL } from '@/hooks/useGraphQL';
 
 const fallbackNotifications = [
   { id: '1', title: 'FMG Candidates Verification schedule updated for May-June 2026' },
@@ -12,25 +12,32 @@ const fallbackNotifications = [
   { id: '4', title: 'Important notification regarding additional qualification degrees verification' },
 ];
 
+const NOTIFICATIONS_QUERY = `#graphql
+  query GetNotifications {
+    notifications {
+      id
+      title
+      created_at
+    }
+  }
+`;
+
 export default function NotificationMarquee() {
-  const [notifications, setNotifications] = useState([]);
+  const { data, executeQuery } = useGraphQL();
 
   useEffect(() => {
-    async function loadNotifications() {
-      try {
-        const response = await axios.get('/api/notifications');
-        if (response.data?.success && response.data.notifications.length > 0) {
-          setNotifications(response.data.notifications);
-        } else {
-          setNotifications(fallbackNotifications);
-        }
-      } catch (error) {
-        console.error('Error fetching notifications for marquee:', error);
-        setNotifications(fallbackNotifications);
-      }
+    executeQuery(NOTIFICATIONS_QUERY).catch((err) => {
+      console.warn('Falling back to default notifications due to GraphQL loading: ', err);
+    });
+  }, [executeQuery]);
+
+  // Memoize notifications mapping list to avoid recalculation on re-renders
+  const notifications = useMemo(() => {
+    if (data?.notifications && data.notifications.length > 0) {
+      return data.notifications;
     }
-    loadNotifications();
-  }, []);
+    return fallbackNotifications;
+  }, [data]);
 
   return (
     <div className="w-full bg-govBlue-100 dark:bg-govBlue-950/80 border-y border-govBlue-200 dark:border-govBlue-900 flex items-center h-11 overflow-hidden transition-colors duration-200">

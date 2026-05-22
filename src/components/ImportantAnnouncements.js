@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useEffect, useMemo } from 'react';
 import { FileText, Download, Calendar, ExternalLink, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { useGraphQL } from '@/hooks/useGraphQL';
 
 const fallbackAnnouncements = [
   { id: '1', title: 'Circular regarding FMG internship rotation schedules for 2026', file_url: '#', created_at: '2026-05-10T00:00:00Z' },
@@ -12,25 +12,33 @@ const fallbackAnnouncements = [
   { id: '4', title: 'Notification on voter list inclusion guidelines for upcoming MMC elections', file_url: '#', created_at: '2026-04-20T00:00:00Z' },
 ];
 
+const ANNOUNCEMENTS_QUERY = `#graphql
+  query GetAnnouncements {
+    announcements {
+      id
+      title
+      file_url
+      created_at
+    }
+  }
+`;
+
 export default function ImportantAnnouncements() {
-  const [announcements, setAnnouncements] = useState([]);
+  const { data, executeQuery } = useGraphQL();
 
   useEffect(() => {
-    async function loadAnnouncements() {
-      try {
-        const response = await axios.get('/api/announcements');
-        if (response.data?.success && response.data.announcements.length > 0) {
-          setAnnouncements(response.data.announcements.slice(0, 4));
-        } else {
-          setAnnouncements(fallbackAnnouncements);
-        }
-      } catch (error) {
-        console.error('Error fetching announcements:', error);
-        setAnnouncements(fallbackAnnouncements);
-      }
+    executeQuery(ANNOUNCEMENTS_QUERY).catch((err) => {
+      console.warn('Falling back to default announcements due to GraphQL loading: ', err);
+    });
+  }, [executeQuery]);
+
+  // Memoize announcements computation to prevent unnecessary rendering updates
+  const announcements = useMemo(() => {
+    if (data?.announcements && data.announcements.length > 0) {
+      return data.announcements.slice(0, 4);
     }
-    loadAnnouncements();
-  }, []);
+    return fallbackAnnouncements;
+  }, [data]);
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
